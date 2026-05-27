@@ -120,20 +120,30 @@ function cleanupUploadedFiles(files = []) {
   }
 }
 
+function propertyResponse(row, req) {
+  const photos = getPhotos.all(row.id).map((photo) => photoToPublic(photo, row.slug, req));
+
+  return {
+    ...mapProperty(row, photos),
+    publicUrl: publicPropertyUrl(row.slug, req),
+    downloadUrl: `/api/properties/${row.slug}/download`
+  };
+}
+
+function removePhotoFiles(photos = []) {
+  for (const photo of photos) {
+    const filePath = path.join(uploadDir, photo.filename);
+    fs.rm(filePath, { force: true }, () => {});
+  }
+}
+
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', app: 'Compartilhador de Imoveis 123 New House' });
 });
 
 app.get('/api/properties', (req, res) => {
   const rows = db.prepare('SELECT * FROM properties ORDER BY created_at DESC').all();
-  const properties = rows.map((row) => {
-    const photos = getPhotos.all(row.id).map((photo) => photoToPublic(photo, row.slug, req));
-    return {
-      ...mapProperty(row, photos),
-      publicUrl: publicPropertyUrl(row.slug, req),
-      downloadUrl: `/api/properties/${row.slug}/download`
-    };
-  });
+  const properties = rows.map((row) => propertyResponse(row, req));
 
   res.json(properties);
 });
@@ -176,17 +186,77 @@ app.post('/api/properties', upload.array('photos', 30), (req, res, next) => {
 
     const id = createProperty();
     const row = getPropertyById.get(id);
-    const photos = getPhotos.all(id).map((photo) => photoToPublic(photo, row.slug, req));
-
-    res.status(201).json({
-      ...mapProperty(row, photos),
-      publicUrl: publicPropertyUrl(row.slug, req),
-      downloadUrl: `/api/properties/${row.slug}/download`
-    });
+    res.status(201).json(propertyResponse(row, req));
   } catch (error) {
     cleanupUploadedFiles(req.files);
     next(error);
   }
+});
+
+app.put('/api/properties/:id', upload.array('photos', 30), (req, res, next) => {
+  try {
+    const row = getPropertyById.get(Number(req.params.id));
+
+    if (!row) {
+      cleanupUploadedFiles(req.files);
+      return res.status(404).json({ error: 'Imovel nao encontrado.' });
+    }
+
+    const required = ['title', 'description', 'price', 'location', 'contact'];
+    const missing = required.filter((field) => !String(req.body[field] || '').trim());
+
+    if (missing.length > 0) {
+      cleanupUploadedFiles(req.files);
+      return res.status(400).json({ error: `Preencha os campos obrigatorios: ${missing.join(', ')}.` });
+    }
+
+    const updateProperty = db.transaction(() => {
+      db.prepare(
+        'UPDATE properties SET title = ?, description = ?, price = ?, location = ?, contact = ? WHERE id = ?'
+      ).run(
+        String(req.body.title).trim(),
+        String(req.body.description).trim(),
+        String(req.body.price).trim(),
+        String(req.body.location).trim(),
+        String(req.body.contact).trim(),
+        row.id
+      );
+
+      if (req.files?.length) {
+        const insertPhoto = db.prepare(
+          'INSERT INTO photos (property_id, filename, original_name, mimetype, size) VALUES (?, ?, ?, ?, ?)'
+        );
+
+        for (const file of req.files) {
+          insertPhoto.run(row.id, file.filename, file.originalname, file.mimetype, file.size);
+        }
+      }
+    });
+
+    updateProperty();
+    res.json(propertyResponse(getPropertyById.get(row.id), req));
+  } catch (error) {
+    cleanupUploadedFiles(req.files);
+    next(error);
+  }
+});
+
+app.delete('/api/properties/:id', (req, res) => {
+  const row = getPropertyById.get(Number(req.params.id));
+
+  if (!row) {
+    return res.status(404).json({ error: 'Imovel nao encontrado.' });
+  }
+
+  const photos = getPhotos.all(row.id);
+
+  db.transaction(() => {
+    db.prepare('DELETE FROM photos WHERE property_id = ?').run(row.id);
+    db.prepare('DELETE FROM properties WHERE id = ?').run(row.id);
+  })();
+
+  removePhotoFiles(photos);
+  res.status(204).send();
 });
 
 app.get('/api/properties/:slug', (req, res) => {
@@ -196,12 +266,7 @@ app.get('/api/properties/:slug', (req, res) => {
     return res.status(404).json({ error: 'Imovel nao encontrado.' });
   }
 
-  const photos = getPhotos.all(row.id).map((photo) => photoToPublic(photo, row.slug, req));
-  res.json({
-    ...mapProperty(row, photos),
-    publicUrl: publicPropertyUrl(row.slug, req),
-    downloadUrl: `/api/properties/${row.slug}/download`
-  });
+  res.json(propertyResponse(row, req));
 });
 
 app.get('/api/properties/:slug/download', (req, res, next) => {
