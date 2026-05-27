@@ -1,16 +1,20 @@
 {
-  "name": "compartilhador-imoveis-123-new-house",
+  "name": "compartilhador-imoveis-backend",
   "version": "1.0.0",
+  "type": "module",
   "private": true,
-  "description": "Sistema web para cadastrar imoveis, compartilhar links publicos e baixar fotos em ZIP.",
   "scripts": {
-    "install:all": "npm install --prefix backend && npm install --prefix frontend",
-    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
-    "start": "npm run start --prefix backend",
-    "build": "npm run build --prefix frontend",
-    "deploy:build": "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend"
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js"
   },
-  "devDependencies": {
-    "concurrently": "^9.2.1"
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "better-sqlite3": "^12.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "multer": "^2.0.2",
+    "slugify": "^1.6.6"
   }
 }
