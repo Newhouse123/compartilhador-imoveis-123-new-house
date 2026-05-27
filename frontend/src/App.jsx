@@ -12,6 +12,8 @@ import UploadCloud from 'lucide-react/dist/esm/icons/upload-cloud.js';
 import X from 'lucide-react/dist/esm/icons/x.js';
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left.js';
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right.js';
+import Pencil from 'lucide-react/dist/esm/icons/pencil.js';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2.js';
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
@@ -76,6 +78,7 @@ function AdminPanel() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [editingProperty, setEditingProperty] = useState(null);
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -124,7 +127,7 @@ function AdminPanel() {
       return;
     }
 
-    if (photos.length === 0) {
+    if (!editingProperty && photos.length === 0) {
       setError('Selecione pelo menos uma foto do imovel.');
       return;
     }
@@ -135,19 +138,22 @@ function AdminPanel() {
 
     setSubmitting(true);
     try {
-      const response = await fetch(apiUrl('/api/properties'), {
-        method: 'POST',
+      const response = await fetch(apiUrl(editingProperty ? `/api/properties/${editingProperty.id}` : '/api/properties'), {
+        method: editingProperty ? 'PUT' : 'POST',
         body: payload
       });
       const data = await response.json();
 
-      if (!response.ok) throw new Error(data.error || 'Nao foi possivel cadastrar o imovel.');
+      if (!response.ok) throw new Error(data.error || 'Nao foi possivel salvar o imovel.');
 
-      setProperties((current) => [data, ...current]);
+      setProperties((current) =>
+        editingProperty ? current.map((property) => (property.id === data.id ? data : property)) : [data, ...current]
+      );
       setForm({ title: '', description: '', price: '', location: '', contact: '' });
       setPhotos([]);
+      setEditingProperty(null);
       event.target.reset();
-      setMessage(`Imovel cadastrado. Link publico: ${data.publicUrl}`);
+      setMessage(editingProperty ? 'Imovel atualizado com sucesso.' : `Imovel cadastrado. Link publico: ${data.publicUrl}`);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -163,6 +169,55 @@ function AdminPanel() {
   async function copyPropertyText(property) {
     await navigator.clipboard.writeText(buildPropertyText(property));
     setMessage('Texto do imovel copiado para a area de transferencia.');
+  }
+
+  function startEditing(property) {
+    setEditingProperty(property);
+    setPhotos([]);
+    setForm({
+      title: property.title,
+      description: property.description,
+      price: property.price,
+      location: property.location,
+      contact: property.contact
+    });
+    setMessage('Editando imovel. Salve as alteracoes ao terminar.');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function cancelEditing() {
+    setEditingProperty(null);
+    setPhotos([]);
+    setForm({ title: '', description: '', price: '', location: '', contact: '' });
+    setMessage('');
+  }
+
+  async function deleteProperty(property) {
+    const shouldDelete = window.confirm(`Excluir o imovel "${property.title}"? Esta acao remove tambem as fotos.`);
+
+    if (!shouldDelete) return;
+
+    setError('');
+    setMessage('');
+
+    try {
+      const response = await fetch(apiUrl(`/api/properties/${property.id}`), { method: 'DELETE' });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Nao foi possivel excluir o imovel.');
+      }
+
+      setProperties((current) => current.filter((item) => item.id !== property.id));
+
+      if (editingProperty?.id === property.id) {
+        cancelEditing();
+      }
+
+      setMessage('Imovel excluido com sucesso.');
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   return (
@@ -185,7 +240,7 @@ function AdminPanel() {
         <form className="admin-form" onSubmit={handleSubmit}>
           <div className="form-title">
             <Plus size={22} />
-            <h2>Novo imovel</h2>
+            <h2>{editingProperty ? 'Editar imovel' : 'Novo imovel'}</h2>
           </div>
 
           {error && <div className="alert error">{error}</div>}
@@ -239,14 +294,20 @@ function AdminPanel() {
               onChange={(event) => setPhotos(Array.from(event.target.files || []))}
             />
             <UploadCloud size={30} />
-            <strong>Selecionar fotos do imovel</strong>
-            <span>{formatFileCount(photos)}</span>
+            <strong>{editingProperty ? 'Adicionar novas fotos' : 'Selecionar fotos do imovel'}</strong>
+            <span>{editingProperty && photos.length === 0 ? 'Opcional ao editar' : formatFileCount(photos)}</span>
           </label>
 
           <button className="primary-button" type="submit" disabled={submitting}>
             {submitting ? <Loader2 className="spin" size={18} /> : <ImagePlus size={18} />}
-            Cadastrar e gerar link
+            {editingProperty ? 'Salvar alteracoes' : 'Cadastrar e gerar link'}
           </button>
+          {editingProperty && (
+            <button className="secondary-button" type="button" onClick={cancelEditing}>
+              <X size={18} />
+              Cancelar edicao
+            </button>
+          )}
         </form>
 
         <aside className="property-list">
@@ -276,6 +337,12 @@ function AdminPanel() {
                     <button type="button" onClick={() => copyPropertyText(property)} aria-label="Copiar texto do imovel">
                       <Copy size={17} />
                       <span>Texto</span>
+                    </button>
+                    <button type="button" onClick={() => startEditing(property)} aria-label="Editar imovel">
+                      <Pencil size={17} />
+                    </button>
+                    <button type="button" onClick={() => deleteProperty(property)} aria-label="Excluir imovel">
+                      <Trash2 size={17} />
                     </button>
                     <a href={`/imovel/${property.slug}`} target="_blank" rel="noreferrer" aria-label="Abrir pagina publica">
                       <ExternalLink size={17} />

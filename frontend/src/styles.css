@@ -185,6 +185,7 @@ textarea:focus {
 }
 
 .primary-button,
+.secondary-button,
 .download-button,
 .copy-text-button {
   display: inline-flex;
@@ -203,6 +204,14 @@ textarea:focus {
 
 .primary-button {
   width: 100%;
+}
+
+.secondary-button {
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid rgba(27, 29, 31, 0.14);
+  background: #fff;
+  color: #303336;
 }
 
 .primary-button:disabled {
