@@ -185,7 +185,8 @@ textarea:focus {
 }
 
 .primary-button,
-.download-button {
+.download-button,
+.copy-text-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -280,12 +281,18 @@ textarea:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
+  min-width: 36px;
   height: 36px;
   border: 1px solid rgba(27, 29, 31, 0.12);
   border-radius: 8px;
   background: #f8f8f7;
   cursor: pointer;
+}
+
+.card-actions button span {
+  margin-left: 6px;
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
 .alert {
@@ -383,6 +390,18 @@ textarea:focus {
   color: #161311;
 }
 
+.copy-text-button {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.13);
+  color: #fff;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .public-content {
   display: grid;
   grid-template-columns: minmax(0, 0.85fr) minmax(340px, 1.15fr);
@@ -463,6 +482,76 @@ textarea:focus {
   touch-action: manipulation;
 }
 
+.image-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  place-items: center;
+  padding: 18px;
+  background: rgba(10, 13, 14, 0.94);
+}
+
+.viewer-topbar,
+.viewer-actions {
+  width: min(1120px, 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #fff;
+  font-weight: 850;
+}
+
+.viewer-topbar button,
+.viewer-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+}
+
+.viewer-topbar button {
+  width: 44px;
+  height: 44px;
+}
+
+.viewer-image {
+  max-width: min(1120px, 100%);
+  max-height: calc(100vh - 156px);
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.viewer-nav {
+  position: absolute;
+  top: 50%;
+  width: 46px;
+  height: 54px;
+  transform: translateY(-50%);
+}
+
+.viewer-nav.previous {
+  left: 18px;
+}
+
+.viewer-nav.next {
+  right: 18px;
+}
+
+.viewer-actions {
+  justify-content: center;
+}
+
+.viewer-actions .single-download {
+  padding: 0 18px;
+}
+
 .public-state {
   min-height: 100vh;
   display: grid;
@@ -526,11 +615,29 @@ textarea:focus {
     padding: 42px 22px;
   }
 
+  .hero-actions {
+    display: grid;
+  }
+
   .thumb-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 
   .single-download {
     min-height: 44px;
+  }
+
+  .image-viewer {
+    padding: 12px;
+  }
+
+  .viewer-image {
+    max-height: calc(100vh - 168px);
+  }
+
+  .viewer-nav {
+    top: auto;
+    bottom: 74px;
+    transform: none;
   }
 }

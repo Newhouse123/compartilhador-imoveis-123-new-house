@@ -9,6 +9,9 @@ import MapPin from 'lucide-react/dist/esm/icons/map-pin.js';
 import Phone from 'lucide-react/dist/esm/icons/phone.js';
 import Plus from 'lucide-react/dist/esm/icons/plus.js';
 import UploadCloud from 'lucide-react/dist/esm/icons/upload-cloud.js';
+import X from 'lucide-react/dist/esm/icons/x.js';
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left.js';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right.js';
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
@@ -26,6 +29,35 @@ function assetUrl(path) {
 function formatFileCount(files) {
   if (!files?.length) return 'Nenhuma foto selecionada';
   return files.length === 1 ? '1 foto selecionada' : `${files.length} fotos selecionadas`;
+}
+
+function formatPriceInput(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+
+  if (!digits) return '';
+
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(Number(digits));
+}
+
+function buildPropertyText(property) {
+  return [
+    property.title,
+    '',
+    `Valor: ${property.price}`,
+    `Localizacao: ${property.location}`,
+    '',
+    property.description,
+    '',
+    `Contato: ${property.contact}`,
+    property.publicUrl ? `Link: ${property.publicUrl}` : ''
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 function App() {
@@ -78,6 +110,10 @@ function AdminPanel() {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   }
 
+  function updatePrice(event) {
+    setForm((current) => ({ ...current, price: formatPriceInput(event.target.value) }));
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
     setError('');
@@ -122,6 +158,11 @@ function AdminPanel() {
   async function copyLink(link) {
     await navigator.clipboard.writeText(link);
     setMessage('Link copiado para a area de transferencia.');
+  }
+
+  async function copyPropertyText(property) {
+    await navigator.clipboard.writeText(buildPropertyText(property));
+    setMessage('Texto do imovel copiado para a area de transferencia.');
   }
 
   return (
@@ -170,7 +211,14 @@ function AdminPanel() {
           <div className="two-columns">
             <label>
               Valor
-              <input name="price" value={form.price} onChange={updateField} placeholder="R$ 850.000" required />
+              <input
+                name="price"
+                value={form.price}
+                onChange={updatePrice}
+                inputMode="numeric"
+                placeholder="R$ 850.000"
+                required
+              />
             </label>
             <label>
               Bairro/cidade
@@ -225,6 +273,10 @@ function AdminPanel() {
                     <button type="button" onClick={() => copyLink(property.publicUrl)} aria-label="Copiar link">
                       <Copy size={17} />
                     </button>
+                    <button type="button" onClick={() => copyPropertyText(property)} aria-label="Copiar texto do imovel">
+                      <Copy size={17} />
+                      <span>Texto</span>
+                    </button>
                     <a href={`/imovel/${property.slug}`} target="_blank" rel="noreferrer" aria-label="Abrir pagina publica">
                       <ExternalLink size={17} />
                     </a>
@@ -244,6 +296,7 @@ function PublicProperty({ slug }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
 
   useEffect(() => {
     async function loadProperty() {
@@ -264,6 +317,23 @@ function PublicProperty({ slug }) {
   }, [slug]);
 
   const activePhoto = useMemo(() => property?.photos?.[activeIndex] || property?.photos?.[0], [property, activeIndex]);
+
+  async function copyPublicText() {
+    await navigator.clipboard.writeText(buildPropertyText(property));
+  }
+
+  function openViewer(index) {
+    setActiveIndex(index);
+    setIsViewerOpen(true);
+  }
+
+  function showPreviousPhoto() {
+    setActiveIndex((current) => (current === 0 ? property.photos.length - 1 : current - 1));
+  }
+
+  function showNextPhoto() {
+    setActiveIndex((current) => (current === property.photos.length - 1 ? 0 : current + 1));
+  }
 
   if (loading) {
     return (
@@ -303,10 +373,16 @@ function PublicProperty({ slug }) {
             </span>
             <span>{property.price}</span>
           </div>
-          <a className="download-button" href={apiUrl(property.downloadUrl)}>
-            <Download size={19} />
-            Baixar fotos do imovel
-          </a>
+          <div className="hero-actions">
+            <a className="download-button" href={apiUrl(property.downloadUrl)}>
+              <Download size={19} />
+              Baixar fotos do imovel
+            </a>
+            <button className="copy-text-button" type="button" onClick={copyPublicText}>
+              <Copy size={19} />
+              Copiar texto
+            </button>
+          </div>
         </div>
       </section>
 
@@ -331,7 +407,7 @@ function PublicProperty({ slug }) {
                 <button
                   className={index === activeIndex ? 'thumb active' : 'thumb'}
                   type="button"
-                  onClick={() => setActiveIndex(index)}
+                  onClick={() => openViewer(index)}
                 >
                   <img src={assetUrl(photo.url)} alt={`${property.title} foto ${index + 1}`} />
                 </button>
@@ -348,6 +424,40 @@ function PublicProperty({ slug }) {
           </div>
         </div>
       </section>
+
+      {isViewerOpen && activePhoto && (
+        <div className="image-viewer" role="dialog" aria-modal="true" aria-label="Visualizacao da foto">
+          <div className="viewer-topbar">
+            <span>
+              Foto {activeIndex + 1} de {property.photos.length}
+            </span>
+            <button type="button" onClick={() => setIsViewerOpen(false)} aria-label="Fechar visualizacao">
+              <X size={22} />
+            </button>
+          </div>
+
+          {property.photos.length > 1 && (
+            <button className="viewer-nav previous" type="button" onClick={showPreviousPhoto} aria-label="Foto anterior">
+              <ChevronLeft size={28} />
+            </button>
+          )}
+
+          <img className="viewer-image" src={assetUrl(activePhoto.url)} alt={`${property.title} foto ampliada`} />
+
+          {property.photos.length > 1 && (
+            <button className="viewer-nav next" type="button" onClick={showNextPhoto} aria-label="Proxima foto">
+              <ChevronRight size={28} />
+            </button>
+          )}
+
+          <div className="viewer-actions">
+            <a className="single-download" href={apiUrl(activePhoto.downloadUrl)}>
+              <Download size={17} />
+              Baixar esta foto
+            </a>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
