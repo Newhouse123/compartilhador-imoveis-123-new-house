@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: compartilhador-imoveis-123-new-house
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run deploy:build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 24.15.0
+      - key: DATA_DIR
+        value: /opt/render/project/src/storage/data
+      - key: UPLOAD_DIR
+        value: /opt/render/project/src/storage/uploads
+    disk:
+      name: imoveis-data
+      mountPath: /opt/render/project/src/storage
+      sizeGB: 1
