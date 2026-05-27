@@ -220,6 +220,32 @@ function AdminPanel() {
     }
   }
 
+  async function deletePhoto(photo) {
+    if (!editingProperty) return;
+
+    const shouldDelete = window.confirm('Excluir esta foto do imovel?');
+
+    if (!shouldDelete) return;
+
+    setError('');
+    setMessage('');
+
+    try {
+      const response = await fetch(apiUrl(`/api/properties/${editingProperty.id}/photos/${photo.id}`), {
+        method: 'DELETE'
+      });
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.error || 'Nao foi possivel excluir a foto.');
+
+      setEditingProperty(data);
+      setProperties((current) => current.map((property) => (property.id === data.id ? data : property)));
+      setMessage('Foto excluida com sucesso.');
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   return (
     <main className="admin-shell">
       <section className="admin-header">
@@ -297,6 +323,26 @@ function AdminPanel() {
             <strong>{editingProperty ? 'Adicionar novas fotos' : 'Selecionar fotos do imovel'}</strong>
             <span>{editingProperty && photos.length === 0 ? 'Opcional ao editar' : formatFileCount(photos)}</span>
           </label>
+
+          {editingProperty && (
+            <div className="edit-photos">
+              <div className="edit-photos-heading">
+                <strong>Fotos atuais</strong>
+                <span>{editingProperty.photos.length}</span>
+              </div>
+              <div className="edit-photo-grid">
+                {editingProperty.photos.map((photo) => (
+                  <div className="edit-photo-item" key={photo.id}>
+                    <img src={assetUrl(photo.url)} alt={photo.originalName} />
+                    <button type="button" onClick={() => deletePhoto(photo)} aria-label="Excluir foto">
+                      <Trash2 size={16} />
+                      Excluir
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <button className="primary-button" type="submit" disabled={submitting}>
             {submitting ? <Loader2 className="spin" size={18} /> : <ImagePlus size={18} />}

@@ -184,6 +184,63 @@ textarea:focus {
   font-weight: 500;
 }
 
+.edit-photos {
+  display: grid;
+  gap: 12px;
+  margin: 4px 0 18px;
+}
+
+.edit-photos-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #303336;
+}
+
+.edit-photos-heading span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: #d7a84e;
+  color: #1b1d1f;
+  font-weight: 900;
+}
+
+.edit-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.edit-photo-item {
+  display: grid;
+  gap: 8px;
+}
+
+.edit-photo-item img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.edit-photo-item button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  border: 1px solid rgba(156, 44, 29, 0.22);
+  border-radius: 8px;
+  background: #ffe8e4;
+  color: #9c2c1d;
+  font-weight: 850;
+  cursor: pointer;
+}
+
 .primary-button,
 .secondary-button,
 .download-button,
@@ -629,6 +686,10 @@ textarea:focus {
   }
 
   .thumb-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .edit-photo-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 
